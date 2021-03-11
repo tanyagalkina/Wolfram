@@ -32,12 +32,12 @@ myMod :: Int -> Int
 myMod n| even n = n `div` 2 
        | otherwise = (n + 1 ) `div` 2
 
-centerLine :: Int -> String -> Char -> String
-centerLine win str pad| win >= (length str) =  rep ++ str ++ rest
+centerLine :: Maybe Int -> String -> Char -> String
+centerLine (Just win) str pad| win >= (length str) =  rep ++ str ++ rest
                         where rep = myReplicate (myMod (win - length str)) pad
                               rest = myReplicate (win - length rep - length str) pad
 centerLine _ [] _= []
-centerLine win str _ = take win cutted
+centerLine (Just win)  str _ = take win cutted
                         where cutted = drop (((length str) - win) `div` 2) str
  
  
@@ -138,20 +138,13 @@ myLoop Nothing con ln = do
    myLoop Nothing con (genNextLine ln (rule con))
 myLoop (Just 0) con _ = putStr ""
 myLoop (Just n) con ln = do
-    putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)
+    putStrLn $ centerLine (window con) (lineToString ln) (head $ left ln)
     myLoop (Just (n - 1)) con (genNextLine ln (rule con))    
 
-toBin :: Int -> [Char]
-toBin 0 = [' ']
-toBin n | n `mod` 2 == 1 = toBin (n `div` 2) ++ ['*']
-        | n `mod` 2 == 0 = toBin (n `div` 2) ++ [' ']
- 
 myWolfram :: Maybe Conf -> IO ()
 myWolfram Nothing = goAway "The args were Falsch!" 84
-myWolfram (Just con) = do
-              myLoop (linien con) con fLine
+myWolfram (Just con) = myLoop (linien con) con fLine >>
               goAway "" 0 
---myWolfram (Just con) = putStrLn $ tellConf con
 
 goAway :: String -> Int -> IO ()
 goAway x 84 = do
