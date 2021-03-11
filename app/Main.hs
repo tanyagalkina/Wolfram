@@ -11,7 +11,9 @@ import Data.Bits
 main :: IO ()
 main = do
     args <- getArgs
+    if even $ length args
     --putStrLn "Hello, my type!"
     --putStrLn (args !! 1) it only works if there are at least 2 args!!
-    myWolfram $ fillConf $ myGetOpts args
+    then myWolfram $ fillConf $ myGetOpts args
+    else goAway "Wrong Args" 84
 --main = someFunc

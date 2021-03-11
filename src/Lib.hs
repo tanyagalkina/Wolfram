@@ -1,5 +1,6 @@
 module Lib (
     Conf(..)
+    , Line (..)
     , nextElem
     , getParam
     , fillConf
@@ -17,25 +18,83 @@ import Data.Maybe
 import System.Exit
 import Text.Read
 import Data.Bits
---  cnf   = rule       start lines     window move
---following :: (Eq a) => a -> [a] -> [a]
---following _ [] = []
---following x (y:l) = if x==y then l else following x l
 
 nextElem :: String -> [String] -> String
 nextElem _ [] = ""
 nextElem str (x:xs) | x == str = head xs 
                     | otherwise = nextElem str xs
 
---nextElem e xs = listToMaybe . drop 1 . dropWhile (/= e) $ xs ++ (take 1 xs)
+myReplicate :: Int -> a -> [a]
+myReplicate 0 _ = []
+myReplicate x bla = bla : myReplicate (x-1) bla
 
---nextElem :: Eq a => a -> [a] -> String
---nextElem _ [] = ""
---nextelem str list = "90"
---next :: (Eq a) => [a] -> a -> Maybe String
---next [] _ = Nothing
---next l x = if f == [] then Just(head l) else Just(head f)
---    where f = following x l:t
+myMod :: Int -> Int
+myMod n| even n = n `div` 2 
+       | otherwise = (n + 1 ) `div` 2
+
+centerLine :: Int -> String -> Char -> String
+centerLine win str pad| win >= (length str) =  rep ++ str ++ rest
+                        where rep = myReplicate (myMod (win - length str)) pad
+                              rest = myReplicate (win - length rep - length str) pad
+centerLine _ [] _= []
+centerLine win str _ = take win cutted
+                        where cutted = drop (((length str) - win) `div` 2) str
+ 
+ 
+getRealChar :: Bool -> [Char]
+getRealChar True = "*"
+getRealChar False = " "
+
+ruleGetChar :: [Char] -> Int -> [Char]
+ruleGetChar [' ', ' ', ' '] n = getRealChar $ testBit n 0
+ruleGetChar [' ', ' ', '*'] n = getRealChar $ testBit n 1
+ruleGetChar [' ', '*', ' '] n = getRealChar $ testBit n 2
+ruleGetChar [' ', '*', '*'] n = getRealChar $ testBit n 3
+ruleGetChar ['*', ' ', ' '] n = getRealChar $ testBit n 4
+ruleGetChar ['*', ' ', '*'] n = getRealChar $ testBit n 5
+ruleGetChar ['*', '*', ' '] n = getRealChar $ testBit n 6
+ruleGetChar ['*', '*', '*'] n = getRealChar $ testBit n 7
+
+data Line = Line { left :: [Char] 
+              , check :: [Char]
+             , right :: [Char] 
+} deriving (Show)
+
+
+getLeft :: Int -> [Char] -> Char -> [Char]
+getLeft r (x:xs) y = ruleGetChar [f, s, t] r
+                  where f = x
+                        s = x
+                        t = y    
+
+getRight :: Int -> Char ->[Char] -> [Char]
+getRight r y (x:xs) = ruleGetChar [f, s, t] r
+                  where f = y
+                        s = x 
+                        t = x    
+
+newGeneration :: Int -> String -> String
+newGeneration r str | length (take 3 str) < 3 = ""
+                    | otherwise = (++) (ruleGetChar seg r)  (newGeneration r (drop 1 str))
+                            where seg = take 3 str   
+
+
+myExpand :: Int -> String -> Line -> String
+myExpand r str ln = res ++ (getRight r (last $ check ln) (right ln))
+                where res = (++) (getLeft r (left ln) (head $ check ln)) str 
+           
+
+fLine = Line {left = " ", check = "*", right = " "} 
+
+genNextLine :: Line -> Maybe Int -> Line 
+genNextLine ln (Just ru) = Line l c r
+                where
+                    l = left ln
+                    r = left ln
+                    c = myExpand ru (newGeneration ru (lineToString ln)) ln
+
+lineToString :: Line -> String
+lineToString l = (++) ((++) (left l) (check l)) (right l)
 
 data Conf =  Conf { rule :: Maybe Int
                     , start :: Maybe Int
@@ -46,12 +105,10 @@ data Conf =  Conf { rule :: Maybe Int
 --defaultConf :: Conf
 --defaultConf = Conf {rule = Nothing, start = Nothing, linien = Nothing, window = Just 80, move = Nothing}
 
+
 getParam :: String -> [String] -> Maybe Int
 getParam  _ [] = Nothing 
 getParam str (x:xs) = readMaybe $ nextElem str (x:xs)
-    --readMaybe $ nextElem str (x:xs):: Maybe Int 
-    --where res = readMaybe (nextElem str (x:xs)):: Maybe Int 
-    --where res = readMaybe
 
 fillConf :: [Maybe Int] -> Maybe Conf
 fillConf [] = Nothing
@@ -75,6 +132,14 @@ tellConf (Conf {rule = r, start = s, linien = l, window = w, move = m})
  = "this conf is:\nrule: " ++ show r ++ "\nstart: " ++ show s ++ "\nlinien: " ++
  show l ++"\nwindow :" ++ show w ++ "\nmove: " ++ show m  
 
+myLoop:: Maybe Int -> Conf -> Line -> IO ()
+myLoop Nothing con ln = do
+   putStrLn $ lineToString ln   
+   myLoop Nothing con (genNextLine ln (rule con))
+myLoop (Just 0) con _ = putStr ""
+myLoop (Just n) con ln = do
+    putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)
+    myLoop (Just (n - 1)) con (genNextLine ln (rule con))    
 
 toBin :: Int -> [Char]
 toBin 0 = [' ']
@@ -83,8 +148,8 @@ toBin n | n `mod` 2 == 1 = toBin (n `div` 2) ++ ['*']
  
 myWolfram :: Maybe Conf -> IO ()
 myWolfram Nothing = goAway "The args were Falsch!" 84
-myWolfram con = do
-              putStrLn $ toBin 30
+myWolfram (Just con) = do
+              myLoop (linien con) con fLine
               goAway "" 0 
 --myWolfram (Just con) = putStrLn $ tellConf con
 
