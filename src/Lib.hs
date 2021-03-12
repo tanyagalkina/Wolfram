@@ -136,14 +136,20 @@ myLoop:: Maybe Int -> Conf -> Line -> IO ()
 myLoop Nothing con ln = do
    putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)  
    myLoop Nothing con (genNextLine ln (rule con))
-myLoop (Just 0) con _ = putStr ""
+myLoop (Just 0) con _ = putStr "" 
 myLoop (Just n) con ln = do
     putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)
     myLoop (Just (n - 1)) con (genNextLine ln (rule con))    
 
+myStart :: Maybe Int -> Maybe Int -> Line -> Line 
+myStart (Just 0) (Just r) ln = ln
+myStart Nothing _ ln = ln
+myStart (Just n) (Just r) ln = myStart (Just (n - 1)) (Just r) (genNextLine ln (Just r))
+
+
 myWolfram :: Maybe Conf -> IO ()
 myWolfram Nothing = goAway "The args were Falsch!" 84
-myWolfram (Just con) = myLoop (linien con) con fLine >>
+myWolfram (Just con) = myLoop (linien con) con (myStart (start con) (rule con) fLine) >>
               goAway "" 0 
 
 goAway :: String -> Int -> IO ()
