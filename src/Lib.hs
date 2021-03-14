@@ -5,7 +5,6 @@ module Lib (
     , getParam
     , fillConf
     , myGetOpts
-    , tellConf
     , myWolfram
     , goAway
 
@@ -34,11 +33,12 @@ myMod n| even n = n `div` 2
 
 centerLine :: Int -> String -> Char -> String
 centerLine win str pad| win >= (length str) =  rep ++ str ++ rest
-                        where rep = myReplicate (myMod (win - length str)) pad
-                              rest = myReplicate (win - length rep - length str) pad
+        where rep = myReplicate (myMod (win - length str)) pad
+              rest = myReplicate (win - length rep - length str) pad
+
 centerLine _ [] _= []
 centerLine  win  str _ = take win cutted
-                        where cutted = drop (((length str) - win) `div` 2) str
+                    where cutted = drop (((length str) - win) `div` 2) str
  
  
 getRealChar :: Bool -> [Char]
@@ -75,15 +75,17 @@ getRight r y (x:xs) = ruleGetChar [f, s, t] r
 
 newGeneration :: Int -> String -> String
 newGeneration r str | length (take 3 str) < 3 = ""
-                    | otherwise = (++) (ruleGetChar seg r)  (newGeneration r (drop 1 str))
+                    | otherwise = (++) (ruleGetChar seg r) (
+                        newGeneration r (drop 1 str))
                             where seg = take 3 str   
 
 
 myExpand :: Int -> String -> Line -> String
-myExpand r str ln = res ++ (getRight r (last $ check ln) (right ln))
-                where res = (++) (getLeft r (left ln) (head $ check ln)) str 
+myExpand r str ln = res ++ (getRight r (
+    last $ check ln) (right ln))
+    where res = (++) (getLeft r (left ln) (head $ check ln)) str 
            
-
+fLine::Line
 fLine = Line {left = " ", check = "*", right = " "} 
 
 genNextLine :: Line -> Maybe Int -> Line 
@@ -91,20 +93,18 @@ genNextLine ln (Just ru) = Line l c r
                 where
                     l = left ln
                     r = left ln
-                    c = myExpand ru (newGeneration ru (lineToString ln)) ln
+                    c = myExpand ru (
+                        newGeneration ru (lineToString ln)) ln
 
 lineToString :: Line -> String
 lineToString l = (++) ((++) (left l) (check l)) (right l)
 
-data Conf =  Conf { rule :: Maybe Int
-                    , start :: Maybe Int
-                    , linien :: Maybe Int
-                    , window :: Maybe Int
-                    , move :: Maybe Int
+data Conf =  Conf { ru :: Maybe Int
+                    , st :: Maybe Int
+                    , li :: Maybe Int
+                    , wi :: Maybe Int
+                    , mo :: Maybe Int
                     } deriving (Show)
---defaultConf :: Conf
---defaultConf = Conf {rule = Nothing, start = Nothing, linien = Nothing, window = Just 80, move = Nothing}
-
 
 getParam :: String -> [String] -> Maybe Int
 getParam  _ [] = Nothing 
@@ -112,10 +112,11 @@ getParam str (x:xs) = readMaybe $ nextElem str (x:xs)
 
 fillConf :: [Maybe Int] -> Maybe Conf
 fillConf [] = Nothing
-fillConf (rule:start:linien:window:move:_) | rule == Nothing = Nothing
-                                           | window > Just 80 = Nothing
-                                           | (rule >= Just 0 && rule <= Just 255) = Just Conf {rule = rule, start = start, linien = linien, window = window, move = move}
-                                           | otherwise = Nothing
+fillConf (r:s:l:w:m:_) | r == Nothing = Nothing
+            | w > Just 80 = Nothing
+ | (r >= Just 0 && r <= Just 255) = Just Conf {
+     ru = r, st = s, li = l, wi = w, mo = m}
+           | otherwise = Nothing
 
 myGetOpts :: [String] -> [Maybe Int]
 myGetOpts [] = []
@@ -127,36 +128,33 @@ myGetOpts args = [rule, start, linien, window, move]
         window = getParam "--window" args
         move = getParam "--move" args
 
-tellConf :: Conf -> String
-tellConf (Conf {rule = r, start = s, linien = l, window = w, move = m})
- = "this conf is:\nrule: " ++ show r ++ "\nstart: " ++ show s ++ "\nlinien: " ++
- show l ++"\nwindow :" ++ show w ++ "\nmove: " ++ show m  
-
 myLoop:: Maybe Int -> Conf -> Line -> IO ()
-myLoop Nothing con ln = do
-   putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)  
-   myLoop Nothing con (genNextLine ln (rule con))
+myLoop Nothing con ln = 
+   putStrLn (centerLine 80 (lineToString ln) (head $ left ln)) >>
+   myLoop Nothing con (genNextLine ln (ru con))
 myLoop (Just 0) con _ = putStr "" 
-myLoop (Just n) con ln = do
-    putStrLn $ centerLine 80 (lineToString ln) (head $ left ln)
-    myLoop (Just (n - 1)) con (genNextLine ln (rule con))    
+myLoop (Just n) con ln = 
+    putStrLn (centerLine 80 (lineToString ln) (head $ left ln)) >> 
+    myLoop (Just (n - 1)) con (genNextLine ln (ru con))    
 
 myStart :: Maybe Int -> Maybe Int -> Line -> Line 
 myStart (Just 0) (Just r) ln = ln
 myStart Nothing _ ln = ln
-myStart (Just n) (Just r) ln = myStart (Just (n - 1)) (Just r) (genNextLine ln (Just r))
+myStart (Just n) (Just r) ln = myStart (
+    Just (n - 1)) (Just r) (genNextLine ln (Just r))
 
 
 myWolfram :: Maybe Conf -> IO ()
 myWolfram Nothing = goAway "The args were Falsch!" 84
-myWolfram (Just con) = myLoop (linien con) con (myStart (start con) (rule con) fLine) >>
+myWolfram (Just con) = myLoop (li con) con (
+    myStart (st con) (ru con) fLine) >>
               goAway "" 0 
 
 goAway :: String -> Int -> IO ()
-goAway x 84 = do
-    putStrLn x
+goAway x 84 = 
+    putStrLn x >>
     exitWith (ExitFailure 84)
-goAway x 0 = do
+goAway x 0 = 
     exitWith(ExitSuccess)    
 
 
